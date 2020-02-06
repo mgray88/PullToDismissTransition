@@ -222,13 +222,10 @@ public class PullToDismissTransition: UIPercentDrivenInteractiveTransition {
                     (translation.y - transitionIsActiveFromTranslationPoint.y) / max(1, view.bounds.size.height)
                 ))
 
-                if progress == 0 {
-                    stopPullToDismiss(on: viewController, finished: false)
-                    break
+                if progress > 0 {
+                    transitionProgress = progress
+                    update(progress)
                 }
-
-                transitionProgress = progress
-                update(progress)
             } else if canBeginPullToDismiss(velocity: velocity, on: viewController) {
                 transitionIsActiveFromTranslationPoint = translation
 
