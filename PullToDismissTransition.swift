@@ -10,8 +10,10 @@ import UIKit
 
 public protocol PullToDismissTransitionDelegate: class {
     func canBeginPullToDismiss(on dismissingViewController: UIViewController) -> Bool
+    func canContinuePullToDismiss(on dismissingViewController: UIViewController) -> Bool
 
     func didBeginPullToDismissAttempt(on dismissingViewController: UIViewController)
+    func didAttempPullToDismiss(on dismissingViewController: UIViewController)
     func didCompletePullToDismissAttempt(on dismissingViewController: UIViewController, willDismiss: Bool)
     func didFinishTransition(for dismissingViewController: UIViewController, didDismiss: Bool)
 }
@@ -21,7 +23,12 @@ extension PullToDismissTransitionDelegate {
         return true
     }
 
+    public func canContinuePullToDismiss(on dismissingViewController: UIViewController) -> Bool {
+        return true
+    }
+
     public func didBeginPullToDismissAttempt(on dismissingViewController: UIViewController) {}
+    public func didAttempPullToDismiss(on dismissingViewController: UIViewController) {}
     public func didCompletePullToDismissAttempt(on dismissingViewController: UIViewController, willDismiss: Bool) {}
     public func didFinishTransition(for dismissingViewController: UIViewController, didDismiss: Bool) {}
 }
@@ -39,6 +46,7 @@ public class PullToDismissTransition: UIPercentDrivenInteractiveTransition {
 
         static let minimumTranslationYForDismiss: CGFloat = 87
         static let translationThreshold: CGFloat = 0.35
+        static let canContinueDismissThreshold: CGFloat = 0.2
 
         static let scalingViewCornerRadius: CGFloat = 12
         static let scalingViewCornerRadiusToggleDuration: TimeInterval = 0.15
@@ -79,8 +87,6 @@ public class PullToDismissTransition: UIPercentDrivenInteractiveTransition {
 
     private var currentTouchIsStillAndActive = false
     private var mostRecentActiveGestureTranslation: CGPoint?
-
-    @objc dynamic public private(set) var transitionProgress: CGFloat = 0
 
     public var transitionDelegateObservation: NSKeyValueObservation?
 
@@ -189,6 +195,15 @@ public class PullToDismissTransition: UIPercentDrivenInteractiveTransition {
             (delegate?.canBeginPullToDismiss(on: viewController) ?? true)
     }
 
+    private func canContinuePullToDismiss(
+        percentComplete: CGFloat,
+        on viewController: UIViewController
+    ) -> Bool {
+        return percentComplete > Const.canContinueDismissThreshold
+            ? (delegate?.canContinuePullToDismiss(on: viewController) ?? true)
+            : true
+    }
+
     private func stopPullToDismiss(on viewController: UIViewController, finished: Bool) {
         if finished {
             finish()
@@ -222,8 +237,9 @@ public class PullToDismissTransition: UIPercentDrivenInteractiveTransition {
                     (translation.y - transitionIsActiveFromTranslationPoint.y) / max(1, view.bounds.size.height)
                 ))
 
-                if progress > 0 {
-                    transitionProgress = progress
+                if !canContinuePullToDismiss(percentComplete: progress, on: viewController) {
+                    panGestureRecognizer.isEnabled = false
+                } else if progress > 0 {
                     update(progress)
                 }
             } else if canBeginPullToDismiss(velocity: velocity, on: viewController) {
@@ -255,8 +271,15 @@ public class PullToDismissTransition: UIPercentDrivenInteractiveTransition {
 
             mostRecentActiveGestureTranslation = nil
 
-            if percentComplete >= Const.translationThreshold || velocity.y >= Const.velocityFinishThreshold {
+            if panGestureRecognizer.isEnabled &&
+                (percentComplete >= Const.translationThreshold || velocity.y >= Const.velocityFinishThreshold) {
                 completionSpeed = max((1 / duration), velocity.y / ((view.frame.height - translation.y) * (1 / duration)))
+            }
+
+            if !panGestureRecognizer.isEnabled {
+                panGestureRecognizer.isEnabled = true
+                completionSpeed = duration + 0.3
+                delegate?.didAttempPullToDismiss(on: viewController)
             }
 
             stopPullToDismiss(on: viewController, finished: panGestureRecognizer.state != .cancelled && (
