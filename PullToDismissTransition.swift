@@ -46,7 +46,7 @@ public class PullToDismissTransition: UIPercentDrivenInteractiveTransition {
 
         static let touchStillWithoutPanEndDelay: TimeInterval = 0.15
 
-        static let transitionDurationDragSlide: TimeInterval = 0.87
+        static let transitionDurationDragSlide: TimeInterval = 0.5
         static let transitionDurationDragScale: TimeInterval = 0.35
         static let transitionReEnableTimeoutAfterScroll: TimeInterval = 0.72
 
@@ -254,6 +254,10 @@ public class PullToDismissTransition: UIPercentDrivenInteractiveTransition {
             }
 
             mostRecentActiveGestureTranslation = nil
+
+            if percentComplete >= Const.translationThreshold || velocity.y >= Const.velocityFinishThreshold {
+                completionSpeed = max((1 / duration), velocity.y / ((view.frame.height - translation.y) * (1 / duration)))
+            }
 
             stopPullToDismiss(on: viewController, finished: panGestureRecognizer.state != .cancelled && (
                 (percentComplete >= Const.translationThreshold && velocity.y >= 0) ||
