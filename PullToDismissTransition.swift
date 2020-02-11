@@ -48,7 +48,7 @@ public class PullToDismissTransition: UIPercentDrivenInteractiveTransition {
 
         static let transitionDurationDragSlide: TimeInterval = 0.87
         static let transitionDurationDragScale: TimeInterval = 0.35
-        static let transitionReEnableTimeoutAfterScroll: TimeInterval = 0.72
+        static let transitionReEnableTimeoutAfterScroll: TimeInterval = 0.26
 
         static let velocityBeginThreshold: CGFloat = 10
         static let velocityFinishThreshold: CGFloat = 1280
@@ -123,7 +123,7 @@ public class PullToDismissTransition: UIPercentDrivenInteractiveTransition {
 
         let shouldScrollViewBounceBeDisabled =
             currentTouchIsStillAndActive ||
-            ((mostRecentActiveGestureTranslation?.y ?? 0) > 0) ||
+            ((mostRecentActiveGestureTranslation?.y ?? 0) > 0 && !recentScrollIsBlockingTransition) ||
             (doesTranslateY && transitionHasEndedAndPanIsInactive && monitoredScrollView.contentOffset.y <= 0)
 
         guard shouldScrollViewBounceBeDisabled != didRequestScrollViewBounceDisable else { return }
@@ -152,7 +152,7 @@ public class PullToDismissTransition: UIPercentDrivenInteractiveTransition {
         ) { [weak self] scrollView, _ in
             self?.updateBounceLockoutState()
 
-            guard scrollView.contentOffset.y > scrollView.bounds.size.height else { return }
+            guard scrollView.contentOffset.y > 0 else { return }
 
             self?.recentScrollIsBlockingTransition = true
             self?.scrollInitiateCount += 1
